@@ -1,2 +1,6 @@
 porter:
   barn: /data/barn
+
+rabbitmq:
+  address: "localhost"
+  queue: "file_list"

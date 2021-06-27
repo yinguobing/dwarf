@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 
+import pika
 import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -35,6 +36,19 @@ if __name__ == "__main__":
     cfg_file = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
     with open("config.yml", 'r') as f:
         cfg = yaml.load(f, Loader=yaml.FullLoader)
+
+    # Setup the post office.
+    post_office = pika.BlockingConnection(
+        pika.ConnectionParameters(cfg['rabbitmq']['address']))
+    channel = post_office.channel()
+
+    queue_name = cfg['rabbitmq']['queue']
+    channel.queue_declare(queue=queue_name)
+
+    message = "Hello world!"
+    channel.basic_publish(exchange='', routing_key=queue_name, body=message)
+
+    post_office.close()
 
     # Where is the barn to watch?
     barn = cfg['porter']['barn']
