@@ -19,14 +19,17 @@ if __name__ == '__main__':
         channel = post_office.channel()
 
         queue_name = cfg['rabbitmq']['queue']
-        channel.queue_declare(queue=queue_name)
+        channel.queue_declare(queue=queue_name, durable=True)
 
         def callback(ch, method, properties, body):
-            print(" [x] Received %r" % body)
+            src_file = body.decode()
+            print(src_file)
+            ch.basic_ack(delivery_tag = method.delivery_tag)
 
+        channel.basic_qos(prefetch_count=1)
         channel.basic_consume(queue=queue_name,
                               on_message_callback=callback,
-                              auto_ack=True)
+                              auto_ack=False)
 
         print(' [*] Waiting for messages. To exit press CTRL+C')
         channel.start_consuming()
