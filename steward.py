@@ -65,12 +65,10 @@ def get_tags(src_file, parse_func, max_num_try, timeout):
 
         if num_try >= max_num_try:
             print("Can not open file. Tried 3 times.")
-            print(src_file)
             break
 
         if seconds_wait >= timeout:
             print("Can not open file. Timeout for 30 seconds.")
-            print(src_file)
             break
 
         if not os.path.exists(src_file):
