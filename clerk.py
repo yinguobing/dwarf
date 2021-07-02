@@ -18,9 +18,13 @@ class Clerk:
 
     def set_collection(self, name):
         """Get the collection by name"""
-        self.col = self.db.get_collection(name)
+        self.collection = self.db.get_collection(name)
 
     def check_existence(self, hash_value):
         """Check if the hash value existed in the current collection."""
-        existence = self.col.find_one({'hash': hash_value})
+        existence = self.collection.find_one({'hash': hash_value})
         return True if existence else False
+
+    def keep_a_record(self, record):
+        """Insert a record into the current collection."""
+        return self.collection.insert_one(record).inserted_id

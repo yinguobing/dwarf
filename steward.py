@@ -155,7 +155,10 @@ def callback(ch, method, properties, body):
 
     record_valid, record = create_record(src_file)
     if record_valid:
-        print(record)
+        db_id = JULIE.keep_a_record(record)
+        print("File logged in with ID: {}".format(db_id))
+    else:
+        print("No data saved.")
 
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
