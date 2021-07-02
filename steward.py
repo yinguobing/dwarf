@@ -79,15 +79,14 @@ def get_tags(src_file, parse_func, max_num_try, timeout):
             continue
 
         try:
-            # Wait for a second so that the file could be fully created.
-            time.sleep(1)
             num_try += 1
             raw_tags = parse_func(src_file)
             process_succeed = True
             break
         except:
-            print("Failed to open file.")
-            print(src_file)
+            print("Failed to open file. Try again...")
+            # Wait for a moment so that the file could be fully created.
+            time.sleep(3)
             continue
 
     return process_succeed, raw_tags
