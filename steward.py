@@ -9,9 +9,9 @@ import yaml
 from PIL import Image
 
 # Load the configuration file.
-cfg_file = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
-with open("config.yml", 'r') as f:
-    cfg = yaml.load(f, Loader=yaml.FullLoader)
+CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
+with open(CFG_FILE, 'r') as f:
+    CFG = yaml.load(f, Loader=yaml.FullLoader)
 
 
 def get_video_tags(video_path):
@@ -26,6 +26,7 @@ def get_image_tags(image_file):
                 "width:": f.width,
                 "height": f.height}
 
+
 def log_unknown_file(somefile):
     """Log the not supported file."""
     print("Unknown file type: {}".format(somefile))
@@ -35,7 +36,7 @@ def log_unknown_file(somefile):
 def get_file_type(file_path):
     """Get the file type by it's suffix."""
     return os.path.splitext(file_path)[-1].split('.')[-1]
-    
+
 
 def get_tags(src_file, parse_func, max_num_try, timeout):
     """Get the tags from the source file."""
@@ -70,7 +71,7 @@ def get_tags(src_file, parse_func, max_num_try, timeout):
             print("Failed to open file.")
             print(src_file)
             continue
-    
+
     return process_succeed, raw_tags
 
 
@@ -81,8 +82,8 @@ def callback(ch, method, properties, body):
     print("File created: {}".format(src_file))
 
     # The files may comes from any source. Check them before going.
-    supported_types = cfg['video_types'] + cfg['image_types']    
-    
+    supported_types = CFG['video_types'] + CFG['image_types']
+
     # Get the parse function by file type.
     suffix = get_file_type(src_file)
 
@@ -90,29 +91,30 @@ def callback(ch, method, properties, body):
         log_unknown_file(src_file)
         succeed = False
     else:
-        if suffix in cfg['video_types']:
+        if suffix in CFG['video_types']:
             parse_func = get_video_tags
-        elif suffix in cfg['image_types']:
+        elif suffix in CFG['image_types']:
             parse_func = get_image_tags
-    
+
         succeed, tags = get_tags(src_file,
-                                parse_func,
-                                cfg['monitor']['max_num_try'],
-                                cfg['monitor']['timeout'])
+                                 parse_func,
+                                 CFG['monitor']['max_num_try'],
+                                 CFG['monitor']['timeout'])
     if succeed:
         print(tags)
 
-    ch.basic_ack(delivery_tag = method.delivery_tag)
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
 
 if __name__ == '__main__':
 
     try:
         # Setup the post office.
         post_office = pika.BlockingConnection(
-            pika.ConnectionParameters(cfg['rabbitmq']['address']))
+            pika.ConnectionParameters(CFG['rabbitmq']['address']))
         channel = post_office.channel()
 
-        queue_name = cfg['rabbitmq']['queue']
+        queue_name = CFG['rabbitmq']['queue']
         channel.queue_declare(queue=queue_name, durable=True)
         channel.basic_qos(prefetch_count=1)
         channel.basic_consume(queue=queue_name,
