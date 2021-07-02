@@ -5,17 +5,26 @@ import sys
 import pika
 import yaml
 import ffmpeg
+from PIL import Image
 
 
 def get_video_tags(video_path):
     """Check the video codec and return it."""
     return ffmpeg.probe(video_path)
 
+
+def get_image_tags(image_file):
+    """Return the basic tags for image file."""
+    with Image.open(image_file) as f:
+        return {"format": f.format,
+                "width:": f.width,
+                "height": f.height}
+
+
 def get_file_type(file_path):
     """Get the file type by it's suffix."""
     return os.path.splitext(file_path)[-1].split('.')[-1]
     
-
 
 if __name__ == '__main__':
     # Load the configuration file.
@@ -37,15 +46,15 @@ if __name__ == '__main__':
             src_file = body.decode()
 
             # Probe the file by type.
-            
             suffix = get_file_type(src_file)
 
             if suffix in cfg['video_types']:
                 raw_tag = get_video_tags(src_file)
-                print(raw_tag)
             else:
-                print("IMAGE", src_file)
+                raw_tag = get_image_tags(src_file)
             
+            print(raw_tag)
+
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
         channel.basic_qos(prefetch_count=1)
