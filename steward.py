@@ -1,10 +1,11 @@
 """The steward watches the file list and dispatch the tasks."""
 import os
 import sys
+import time
 
+import ffmpeg
 import pika
 import yaml
-import ffmpeg
 from PIL import Image
 
 
@@ -48,9 +49,11 @@ if __name__ == '__main__':
 
         # Define the actions for message.
         def callback(ch, method, properties, body):
+            # Get the full file path.
             src_file = body.decode()
+            print("File created: {}".format(src_file))
 
-            # Probe the file by type.
+            # Get the parse function by file type.
             suffix = get_file_type(src_file)
 
             if suffix in cfg['video_types']:
@@ -60,13 +63,36 @@ if __name__ == '__main__':
             else:
                 parse_func = log_unknown_file
             
-            try:
-                raw_tags = parse_func(src_file)
-            except:
-                print("Can not open file. Try again...")
-                raw_tags = parse_func(src_file)
+            # Parse the file.
+            num_try = 0
+            seconds_wait = 0
+            process_succeed = False
+
+            while True:
+
+                if num_try >= 3:
+                    print("Can not open file. Tried 3 times.")
+                    break
+
+                if seconds_wait >= 30:
+                    print("Can not open file. Timeout for 30 seconds.")
+                    break
+
+                if not os.path.exists(src_file):
+                    seconds_wait += 1
+                    time.sleep(1)
+                    continue
+
+                try:
+                    num_try += 1
+                    raw_tags = parse_func(src_file)
+                    process_succeed = True
+                except:
+                    print("Can not open file. Try for {} time(s)".format(num_try))
+                    continue
             
-            print(raw_tags)
+            if process_succeed:
+                print(raw_tags)
 
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
