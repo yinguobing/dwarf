@@ -1,4 +1,5 @@
 """The steward watches the file list and dispatch the tasks."""
+import datetime
 import os
 import sys
 import time
@@ -8,11 +9,20 @@ import ffmpeg
 import pika
 import yaml
 from PIL import Image
+from clerk import Clerk
 
 # Load the configuration file.
 CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
 with open(CFG_FILE, 'r') as f:
     CFG = yaml.load(f, Loader=yaml.FullLoader)
+
+# Employ a clerk to manage the books.
+JULIE = Clerk(CFG['mongodb']["host"],
+              CFG['mongodb']['port'],
+              CFG['mongodb']['username'],
+              CFG['mongodb']['password'],
+              CFG["mongodb"]['db_name'])
+
 
 def get_checksum(file_path):
     """Get the hash value of the input file."""
@@ -81,33 +91,69 @@ def get_tags(src_file, parse_func, max_num_try, timeout):
     return process_succeed, raw_tags
 
 
+def create_record(file_path):
+    """Create a valid record to be stored in the database.
+
+    Args:
+        file_path:
+
+    Returns:
+        succeed: a flag indicating the record was built successfully.
+        record: the record to be inserted to database.
+    """
+    succeed = False
+    record = None
+
+    # The files may comes from any source. But only the video and image files
+    # are of concers.
+    supported_types = CFG['video_types'] + CFG['image_types']
+    suffix = get_file_type(file_path)
+
+    if suffix not in supported_types:
+        log_unknown_file(file_path)
+    else:
+        if suffix in CFG['video_types']:
+            parse_func = get_video_tags
+            collection_name = "videos"
+        elif suffix in CFG['image_types']:
+            parse_func = get_image_tags
+            collection_name = "images"
+
+        # Make sure this file was not processed before.
+        hash_value = get_checksum(file_path)
+        JULIE.set_collection(collection_name)
+        already_existed = JULIE.check_existence(hash_value)
+
+        # Only process the file if it's new.
+        if not already_existed:
+            succeed, tags = get_tags(file_path,
+                                     parse_func,
+                                     CFG['monitor']['max_num_try'],
+                                     CFG['monitor']['timeout'])
+
+        # Construct a record.
+        if succeed:
+            record = {
+                "base_name": os.path.basename(file_path),
+                "path": file_path,
+                "hash": hash_value,
+                "file_size": os.stat(file_path).st_size,
+                "index_time": datetime.datetime.utcnow(),
+                "raw_tag": tags
+            }
+
+    return succeed, record
+
+
 def callback(ch, method, properties, body):
     # Get the full file path.
     src_file = body.decode()
     print('_' * 65)
     print("File created: {}".format(src_file))
 
-    # The files may comes from any source. Check them before going.
-    supported_types = CFG['video_types'] + CFG['image_types']
-
-    # Get the parse function by file type.
-    suffix = get_file_type(src_file)
-
-    if suffix not in supported_types:
-        log_unknown_file(src_file)
-        succeed = False
-    else:
-        if suffix in CFG['video_types']:
-            parse_func = get_video_tags
-        elif suffix in CFG['image_types']:
-            parse_func = get_image_tags
-
-        succeed, tags = get_tags(src_file,
-                                 parse_func,
-                                 CFG['monitor']['max_num_try'],
-                                 CFG['monitor']['timeout'])
-    if succeed:
-        print(tags)
+    record_valid, record = create_record(src_file)
+    if record_valid:
+        print(record)
 
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
