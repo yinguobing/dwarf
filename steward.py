@@ -127,7 +127,9 @@ def create_record(file_path):
         already_existed = JULIE.check_existence(hash_value)
 
         # Only process the file if it's new.
-        if not already_existed:
+        if already_existed:
+            print("Duplicated file detected.")
+        else:
             succeed, tags = get_tags(file_path,
                                      parse_func,
                                      CFG['monitor']['max_num_try'],
