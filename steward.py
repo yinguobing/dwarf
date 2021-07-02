@@ -55,7 +55,18 @@ def get_file_type(file_path):
 
 
 def get_tags(src_file, parse_func, max_num_try, timeout):
-    """Get the tags from the source file."""
+    """Get the tags from the source file.
+
+    Args:
+        src_file: the file's full path.
+        parse_func: which function to use when parsing the file.
+        max_num_try: max times trying if the parsing fails.
+        timeout: how long to wait for a valid parsing.
+
+    returns:
+        process_succeed: a boolean value indicating the process status
+        raw_tags: the parsed results.
+    """
     num_try = 0
     seconds_wait = 0
     process_succeed = False
@@ -104,7 +115,7 @@ def create_record(file_path):
     record = None
 
     # The files may comes from any source. But only the video and image files
-    # are of concers.
+    # are of concerns.
     supported_types = CFG['video_types'] + CFG['image_types']
     suffix = get_file_type(file_path)
 
@@ -147,6 +158,7 @@ def create_record(file_path):
 
 
 def callback(ch, method, properties, body):
+    """This is the function that was called when a message is received."""
     # Get the full file path.
     src_file = body.decode()
     print('_' * 65)
