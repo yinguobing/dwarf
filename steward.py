@@ -79,6 +79,8 @@ def get_tags(src_file, parse_func, max_num_try, timeout):
             continue
 
         try:
+            # Wait for a second so that the file could be fully created.
+            time.sleep(1)
             num_try += 1
             raw_tags = parse_func(src_file)
             process_succeed = True
