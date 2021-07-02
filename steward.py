@@ -20,6 +20,11 @@ def get_image_tags(image_file):
                 "width:": f.width,
                 "height": f.height}
 
+def log_unknown_file(somefile):
+    """Log the not supported file."""
+    print("Unknown file type: {}".format(somefile))
+    return {}
+
 
 def get_file_type(file_path):
     """Get the file type by it's suffix."""
@@ -49,11 +54,19 @@ if __name__ == '__main__':
             suffix = get_file_type(src_file)
 
             if suffix in cfg['video_types']:
-                raw_tag = get_video_tags(src_file)
+                parse_func = get_video_tags
+            elif suffix in cfg['image_types']:
+                parse_func = get_image_tags
             else:
-                raw_tag = get_image_tags(src_file)
+                parse_func = log_unknown_file
             
-            print(raw_tag)
+            try:
+                raw_tags = parse_func(src_file)
+            except:
+                print("Can not open file. Try again...")
+                raw_tags = parse_func(src_file)
+            
+            print(raw_tags)
 
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
