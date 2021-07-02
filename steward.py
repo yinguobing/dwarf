@@ -2,6 +2,7 @@
 import os
 import sys
 import time
+from hashlib import md5 as hash_func
 
 import ffmpeg
 import pika
@@ -12,6 +13,11 @@ from PIL import Image
 CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
 with open(CFG_FILE, 'r') as f:
     CFG = yaml.load(f, Loader=yaml.FullLoader)
+
+def get_checksum(file_path):
+    """Get the hash value of the input file."""
+    with open(file_path, 'rb') as f:
+        return hash_func(f.read()).hexdigest()
 
 
 def get_video_tags(video_path):
