@@ -8,6 +8,11 @@ import pika
 import yaml
 from PIL import Image
 
+# Load the configuration file.
+cfg_file = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
+with open("config.yml", 'r') as f:
+    cfg = yaml.load(f, Loader=yaml.FullLoader)
+
 
 def get_video_tags(video_path):
     """Check the video codec and return it."""
@@ -32,11 +37,74 @@ def get_file_type(file_path):
     return os.path.splitext(file_path)[-1].split('.')[-1]
     
 
+def get_tags(src_file, parse_func, max_num_try, timeout):
+    """Get the tags from the source file."""
+    num_try = 0
+    seconds_wait = 0
+    process_succeed = False
+    raw_tags = {}
+
+    while True:
+
+        if num_try >= max_num_try:
+            print("Can not open file. Tried 3 times.")
+            print(src_file)
+            break
+
+        if seconds_wait >= timeout:
+            print("Can not open file. Timeout for 30 seconds.")
+            print(src_file)
+            break
+
+        if not os.path.exists(src_file):
+            seconds_wait += 1
+            time.sleep(1)
+            continue
+
+        try:
+            num_try += 1
+            raw_tags = parse_func(src_file)
+            process_succeed = True
+            break
+        except:
+            print("Failed to open file.")
+            print(src_file)
+            continue
+    
+    return process_succeed, raw_tags
+
+
+def callback(ch, method, properties, body):
+    # Get the full file path.
+    src_file = body.decode()
+    print('_' * 65)
+    print("File created: {}".format(src_file))
+
+    # The files may comes from any source. Check them before going.
+    supported_types = cfg['video_types'] + cfg['image_types']    
+    
+    # Get the parse function by file type.
+    suffix = get_file_type(src_file)
+
+    if suffix not in supported_types:
+        log_unknown_file(src_file)
+        succeed = False
+    else:
+        if suffix in cfg['video_types']:
+            parse_func = get_video_tags
+        elif suffix in cfg['image_types']:
+            parse_func = get_image_tags
+    
+        succeed, tags = get_tags(src_file,
+                                parse_func,
+                                cfg['monitor']['max_num_try'],
+                                cfg['monitor']['timeout'])
+    if succeed:
+        print(tags)
+
+    ch.basic_ack(delivery_tag = method.delivery_tag)
+
 if __name__ == '__main__':
-    # Load the configuration file.
-    cfg_file = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
-    with open("config.yml", 'r') as f:
-        cfg = yaml.load(f, Loader=yaml.FullLoader)
 
     try:
         # Setup the post office.
@@ -46,56 +114,6 @@ if __name__ == '__main__':
 
         queue_name = cfg['rabbitmq']['queue']
         channel.queue_declare(queue=queue_name, durable=True)
-
-        # Define the actions for message.
-        def callback(ch, method, properties, body):
-            # Get the full file path.
-            src_file = body.decode()
-            print("File created: {}".format(src_file))
-
-            # Get the parse function by file type.
-            suffix = get_file_type(src_file)
-
-            if suffix in cfg['video_types']:
-                parse_func = get_video_tags
-            elif suffix in cfg['image_types']:
-                parse_func = get_image_tags
-            else:
-                parse_func = log_unknown_file
-            
-            # Parse the file.
-            num_try = 0
-            seconds_wait = 0
-            process_succeed = False
-
-            while True:
-
-                if num_try >= 3:
-                    print("Can not open file. Tried 3 times.")
-                    break
-
-                if seconds_wait >= 30:
-                    print("Can not open file. Timeout for 30 seconds.")
-                    break
-
-                if not os.path.exists(src_file):
-                    seconds_wait += 1
-                    time.sleep(1)
-                    continue
-
-                try:
-                    num_try += 1
-                    raw_tags = parse_func(src_file)
-                    process_succeed = True
-                except:
-                    print("Can not open file. Try for {} time(s)".format(num_try))
-                    continue
-            
-            if process_succeed:
-                print(raw_tags)
-
-            ch.basic_ack(delivery_tag = method.delivery_tag)
-
         channel.basic_qos(prefetch_count=1)
         channel.basic_consume(queue=queue_name,
                               on_message_callback=callback,
