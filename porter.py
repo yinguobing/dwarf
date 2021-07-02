@@ -58,6 +58,8 @@ if __name__ == "__main__":
     observer.schedule(event_handler, barn, recursive=True)
     observer.start()
 
+    print(' [*] Monitoring... To exit press CTRL+C')
+
     # Let it go.
     try:
         while observer.is_alive():
