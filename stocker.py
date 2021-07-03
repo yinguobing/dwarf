@@ -15,3 +15,10 @@ class Stocker:
         self.barn = barn
         self.warehouse = warehouse
 
+    def list_files(self, dir):
+        """List all the files in the dir."""
+        all_files = []
+        for dirpath, _, files in os.walk(dir):
+            all_files.extend([os.path.join(dirpath, f) for f in files])
+
+        return all_files
