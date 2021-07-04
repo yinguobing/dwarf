@@ -3,14 +3,13 @@ import datetime
 import os
 import sys
 import time
-from hashlib import md5 as hash_func
 
 import ffmpeg
-import pika
 import yaml
 from PIL import Image
 
 from clerk import Clerk
+from rabbit import Rabbit
 from stocker import Stocker
 
 # Load the configuration file.
@@ -182,7 +181,7 @@ def process(src_file):
         print("Failed to save in database.")
         TOM.destry(dst_file)
         return failure
-    
+
     # Finally, clean the original file.
     TOM.destry(src_file)
 
@@ -212,20 +211,16 @@ def callback(ch, method, properties, body):
 if __name__ == '__main__':
 
     try:
-        # Setup the post office.
-        post_office = pika.BlockingConnection(
-            pika.ConnectionParameters(CFG['rabbitmq']['address']))
-        channel = post_office.channel()
+        # Summon a rabbit to deliver the mesages.
+        PETER = Rabbit(address=CFG['rabbitmq']['address'],
+                       queue=CFG['rabbitmq']['queue'],
+                       talking=False,
+                       callback=callback)
 
-        queue_name = CFG['rabbitmq']['queue']
-        channel.queue_declare(queue=queue_name, durable=True)
-        channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(queue=queue_name,
-                              on_message_callback=callback,
-                              auto_ack=False)
-
+        # Start listening..
         print(' [*] Waiting for messages. To exit press CTRL+C')
-        channel.start_consuming()
+        PETER.start_listening()
+        
 
     except KeyboardInterrupt:
         print('Interrupted')

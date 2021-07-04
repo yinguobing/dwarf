@@ -4,10 +4,11 @@ import logging
 import os
 import sys
 
-import pika
 import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+
+from rabbit import Rabbit
 
 # Load the configuration file.
 CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
@@ -20,12 +21,8 @@ class FolderEventHandler(FileSystemEventHandler):
     def __init__(self, mq_address, queue):
         super().__init__()
 
-        # Setup the post office.
-        self.messenger = pika.BlockingConnection(
-            pika.ConnectionParameters(mq_address))
-        self.channel = self.messenger.channel()
-        self.channel.queue_declare(queue=queue, durable=True)
-        self.queue = queue
+        # Summon a rabbit.
+        self.PETER = Rabbit(address=mq_address, queue=queue, talking=True)
 
     def on_created(self, event):
         print(event.event_type, event.src_path)
@@ -39,11 +36,7 @@ class FolderEventHandler(FileSystemEventHandler):
 
     def send_message(self, src_path):
         if not os.path.isdir(src_path):
-            self.channel.basic_publish(
-                exchange='',
-                routing_key=self.queue,
-                body=src_path,
-                properties=pika.BasicProperties(delivery_mode=2))
+            self.PETER.speak(src_path)
 
 
 if __name__ == "__main__":
