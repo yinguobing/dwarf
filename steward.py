@@ -9,7 +9,9 @@ import ffmpeg
 import pika
 import yaml
 from PIL import Image
+
 from clerk import Clerk
+from stocker import Stocker
 
 # Load the configuration file.
 CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
@@ -21,13 +23,11 @@ JULIE = Clerk(CFG['mongodb']["host"],
               CFG['mongodb']['port'],
               CFG['mongodb']['username'],
               CFG['mongodb']['password'],
-              CFG["mongodb"]['db_name'])
+              CFG["mongodb"]['name'])
 
-
-def get_checksum(file_path):
-    """Get the hash value of the input file."""
-    with open(file_path, 'rb') as f:
-        return hash_func(f.read()).hexdigest()
+# Employ a stocker to file the warehouse.
+TOM = Stocker(CFG['dirs']['barn'],
+              CFG['dirs']['warehouse'])
 
 
 def get_video_tags(video_path):
@@ -43,15 +43,38 @@ def get_image_tags(image_file):
                 "height": f.height}
 
 
-def log_unknown_file(somefile):
-    """Log the not supported file."""
-    print("Unknown file type: {}".format(somefile))
-    return {}
-
-
 def get_file_type(file_path):
     """Get the file type by it's suffix."""
     return os.path.splitext(file_path)[-1].split('.')[-1]
+
+
+def precheck(file_path):
+    """Check the src file and return the parse function and the collection name.
+
+    The files may comes from any source. But only the video and image files
+    are of concerns. This can be configured in the config.yml file.
+
+    Args:
+        file_path: the full path of the file to be checked.
+
+    Returns:
+        parse_func: the parse function to be used.
+        collection_name: the collection name this file's record should be saved.
+    """
+    supported_types = CFG['video_types'] + CFG['image_types']
+    suffix = get_file_type(file_path)
+
+    if suffix not in supported_types:
+        print("Unknown file type: {}".format(file_path))
+    else:
+        if suffix in CFG['video_types']:
+            parse_func = get_video_tags
+            collection_name = CFG["mongodb"]["collections"]["videos"]
+        elif suffix in CFG['image_types']:
+            parse_func = get_image_tags
+            collection_name = CFG["mongodb"]["collections"]["images"]
+
+    return parse_func, collection_name
 
 
 def get_tags(src_file, parse_func, max_num_try, timeout):
@@ -101,76 +124,84 @@ def get_tags(src_file, parse_func, max_num_try, timeout):
     return process_succeed, raw_tags
 
 
-def create_record(file_path):
-    """Create a valid record to be stored in the database.
+def process(file_path):
+    """Process the sample file.
+
+    Tasks: 
+        - Check if the file is valid and of interest.
+        - Get the raw tags of the file and stock it the warehouse.
+        - Create a valid record to be stored in the database.
 
     Args:
         file_path:
 
     Returns:
-        succeed: a flag indicating the record was built successfully.
-        record: the record to be inserted to database.
+        succeed: a flag indicating the process accomplished successfully.
+        record_id: the database record id.
     """
-    succeed = False
-    record = None
+    # Mark the initial state to False to save a lot lines of code.
+    failure = False, None
 
-    # The files may comes from any source. But only the video and image files
-    # are of concerns.
-    supported_types = CFG['video_types'] + CFG['image_types']
-    suffix = get_file_type(file_path)
+    # The file may be of any format. Precheck it to get the correct parse
+    # function and the DB collection name.
+    parse_func, collection_name = precheck(file_path)
 
-    if suffix not in supported_types:
-        log_unknown_file(file_path)
-    else:
-        if suffix in CFG['video_types']:
-            parse_func = get_video_tags
-            collection_name = "videos"
-        elif suffix in CFG['image_types']:
-            parse_func = get_image_tags
-            collection_name = "images"
+    # Make sure this file was not processed before.
+    hash_value = TOM.get_checksum(file_path)
+    already_existed = JULIE.check_existence(hash_value, collection_name)
+    if already_existed:
+        print("Duplicated file detected.")
+        return failure
 
-        # Make sure this file was not processed before.
-        hash_value = get_checksum(file_path)
-        JULIE.set_collection(collection_name)
-        already_existed = JULIE.check_existence(hash_value)
+    # Get the tags of the file.
+    succeed_tag, tags = get_tags(file_path,
+                                 parse_func,
+                                 CFG['monitor']['max_num_try'],
+                                 CFG['monitor']['timeout'])
+    if not succeed_tag:
+        print("Failed to get file tags.")
+        return failure
 
-        # Only process the file if it's new.
-        if already_existed:
-            print("Duplicated file detected.")
-        else:
-            succeed, tags = get_tags(file_path,
-                                     parse_func,
-                                     CFG['monitor']['max_num_try'],
-                                     CFG['monitor']['timeout'])
+    # Stock the file in the warehouse if any tag got.
+    succeed_file, new_path = TOM.stock(file_path)
+    if not succeed_file:
+        print("Failed to move the file.")
+        return failure
 
-        # Construct a record.
-        if succeed:
-            record = {
-                "base_name": os.path.basename(file_path),
-                "path": file_path,
-                "hash": hash_value,
-                "file_size": os.stat(file_path).st_size,
-                "index_time": datetime.datetime.utcnow(),
-                "raw_tag": tags
-            }
+    # Create a database record and save it.
+    record = {"base_name": os.path.basename(file_path),
+              "path": new_path,
+              "hash": hash_value,
+              "file_size": os.stat(new_path).st_size,
+              "index_time": datetime.datetime.utcnow(),
+              "raw_tag": tags}
+    JULIE.set_collection(collection_name)
+    try:
+        record_id = JULIE.keep_a_record(record)
+    except:
+        print("Failed to save in database.")
+        return failure
 
-    return succeed, record
+    return True, record_id
 
 
 def callback(ch, method, properties, body):
     """This is the function that was called when a message is received."""
     # Get the full file path.
     src_file = body.decode()
+
     print('_' * 65)
     print("File created: {}".format(src_file))
 
-    record_valid, record = create_record(src_file)
-    if record_valid:
-        db_id = JULIE.keep_a_record(record)
-        print("File logged in with ID: {}".format(db_id))
+    # Try to process the source file.
+    succeed, record_id = process(src_file)
+
+    if succeed:
+        print("File saved and logged in with ID: {}".format(record_id))
     else:
         print("No data saved.")
 
+    # Tell the rabbit the result.
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
