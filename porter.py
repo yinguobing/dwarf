@@ -9,6 +9,11 @@ import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
+# Load the configuration file.
+CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
+with open(CFG_FILE, 'r') as f:
+    CFG = yaml.load(f, Loader=yaml.FullLoader)
+
 
 class FolderEventHandler(FileSystemEventHandler):
 
@@ -42,19 +47,14 @@ class FolderEventHandler(FileSystemEventHandler):
 
 
 if __name__ == "__main__":
-    # Load the configuration file.
-    cfg_file = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
-    with open("config.yml", 'r') as f:
-        cfg = yaml.load(f, Loader=yaml.FullLoader)
-
     # Where is the barn to watch? Make sure the folder already existed.
-    barn = cfg['porter']['barn']
+    barn = CFG['dirs']['barn']
     assert os.path.exists(barn), "Target folder not found, please check."
 
     # Setup the file observer.
     observer = Observer()
-    event_handler = FolderEventHandler(mq_address=cfg['rabbitmq']['address'],
-                                       queue=cfg['rabbitmq']['queue'])
+    event_handler = FolderEventHandler(mq_address=CFG['rabbitmq']['address'],
+                                       queue=CFG['rabbitmq']['queue'])
     observer.schedule(event_handler, barn, recursive=True)
     observer.start()
 
