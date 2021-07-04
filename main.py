@@ -6,7 +6,6 @@ import yaml
 
 from clerk import Clerk
 from porter import Porter
-from rabbit import Rabbit
 from stocker import Stocker
 from steward import Steward
 
