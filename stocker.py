@@ -77,7 +77,7 @@ class Stocker:
         except:
             new_path = None
             succeed = False
-            logger.warning("Can not move file {}".format(src_file))
+            logger.debug("Can not move file {}".format(src_file))
 
         return succeed, new_path
 
