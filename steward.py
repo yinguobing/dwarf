@@ -121,6 +121,8 @@ class Steward:
                 raw_tags = parse_func(src_file)
                 process_succeed = True
                 break
+            except FileNotFoundError:
+                logger.error("FFMPEG not installed correctly.")
             except:
                 logger.warning("Failed to open file. Try again...")
                 # Wait for a moment so that the file could be fully created.
