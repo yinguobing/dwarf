@@ -8,6 +8,8 @@ import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
+from rabbit import Rabbit
+
 # Load the configuration file.
 CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
 with open(CFG_FILE, 'r') as f:
@@ -27,7 +29,7 @@ class FolderEventHandler(FileSystemEventHandler):
         self.send_message(event.src_path)
 
     def on_modified(self, event):
-        print(event.event_type, event.src_path)
+        pass
 
     def on_deleted(self, event):
         print(event.event_type, event.src_path)
@@ -39,15 +41,18 @@ class FolderEventHandler(FileSystemEventHandler):
 
 class Porter:
 
-    def __init__(self, target, messenger):
+    def __init__(self, target):
         """A porter will watch any file changes in the target directory.
 
         Args:
             target: the directory to be watched.
-            messenger: a messanger to deliver messages.
         """
         # Where is the barn to watch? Make sure the folder already existed.
         assert os.path.exists(target), "Target folder not found, please check."
+
+        messenger = Rabbit(address=CFG['rabbitmq']['address'],
+                           queue=CFG['rabbitmq']['queue'],
+                           talking=True)
 
         # Setup the file observer.
         self.observer = Observer()
