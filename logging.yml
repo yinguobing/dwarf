@@ -9,18 +9,23 @@ handlers:
     level: DEBUG
     formatter: simple
     stream: ext://sys.stdout
+  file:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: simple
+    filename: dwarf.log
 
 loggers:
   porter:
     level: INFO
-    handlers: [console]
+    handlers: [console, file]
     propagate: no
   root:
     level: INFO
-    handlers: [console]
+    handlers: [console, file]
   steward:
     level: INFO
-    handlers: [console]
+    handlers: [console, file]
   stocker:
     level: INFO
-    handlers: [console]
+    handlers: [console, file]
