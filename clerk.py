@@ -22,8 +22,14 @@ class Clerk:
 
     def check_existence(self, hash_value):
         """Check if the hash value existed in the current collection."""
-        existence = self.collection.find_one({'hash': hash_value})
-        return True if existence else False
+        exists = self.collection.find_one({'hash': hash_value})
+        return True if exists else False
+
+    def check_existence(self, hash_value, collection):
+        """Check if the hash value existed in the collection."""
+        exists = self.db.get_collection(collection).find_one(
+            {'hash': hash_value})
+        return True if exists else False
 
     def keep_a_record(self, record):
         """Insert a record into the current collection."""
