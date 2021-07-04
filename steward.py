@@ -1,5 +1,8 @@
 """The steward watches the file list and dispatch the tasks."""
+
 import datetime
+import logging
+import logging.config
 import os
 import sys
 import time
@@ -9,6 +12,10 @@ import yaml
 from PIL import Image
 
 from rabbit import Rabbit
+
+# Setup the logger.
+logging.config.dictConfig(yaml.load(open("logging.yml", 'r'), yaml.FullLoader))
+logger = logging.getLogger('steward')
 
 # Load the configuration file.
 CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
@@ -64,7 +71,7 @@ class Steward:
         suffix = get_file_type(file_path)
 
         if suffix not in supported_types:
-            print("Unknown file type: {}".format(file_path))
+            logger.warning("Unknown file type: {}".format(file_path))
             return False, None, None
         else:
             if suffix in CFG['video_types']:
@@ -97,11 +104,11 @@ class Steward:
         while True:
 
             if num_try >= max_num_try:
-                print("Can not open file. Tried 3 times.")
+                logger.warning("Can not open file. Tried 3 times.")
                 break
 
             if seconds_wait >= timeout:
-                print("Can not open file. Timeout for 30 seconds.")
+                logger.warning("Can not open file. Timeout for 30 seconds.")
                 break
 
             if not os.path.exists(src_file):
@@ -115,7 +122,7 @@ class Steward:
                 process_succeed = True
                 break
             except:
-                print("Failed to open file. Try again...")
+                logger.warning("Failed to open file. Try again...")
                 # Wait for a moment so that the file could be fully created.
                 time.sleep(3)
                 continue
@@ -166,7 +173,7 @@ class Steward:
         already_existed = self.clark.check_existence(
             hash_value, collection_name)
         if already_existed:
-            print("Duplicated file detected.")
+            logger.warning("Duplicated file detected.")
             return failure
 
         # Get the tags of the file.
@@ -175,19 +182,19 @@ class Steward:
                                           CFG['monitor']['max_num_try'],
                                           CFG['monitor']['timeout'])
         if not succeed:
-            print("Failed to get file tags.")
+            logger.warning("Failed to get file tags.")
             return failure
 
         # Stock the file in the warehouse if any tag got.
         succeed, dst_file = self.stocker.stock(src_file)
         if not succeed:
-            print("Failed to move the file.")
+            logger.warning("Failed to move the file.")
             return failure
 
         # Try to get the manual tags.
         succeed, manual_tags = self.get_manual_tags(src_file)
         if not succeed:
-            print("Manual tag file not found. This file will not be processed.")
+            logger.warning("Manual tag file not found. This file will not be processed.")
             return failure
 
         # Create a database record and save it.
@@ -202,7 +209,7 @@ class Steward:
         try:
             record_id = self.clark.keep_a_record(record)
         except:
-            print("Failed to save in database.")
+            logger.warning("Failed to save in database.")
             self.stocker.destry(dst_file)
             return failure
 
@@ -216,8 +223,8 @@ class Steward:
         # Get the full file path.
         src_file = body.decode()
 
-        print('_' * 65)
-        print("File created: {}".format(src_file))
+        logger.debug('_' * 65)
+        logger.debug("File created: {}".format(src_file))
 
         # Try to process the source file.
         succeed, record_id = self.process(src_file)
@@ -225,7 +232,7 @@ class Steward:
         if succeed:
             print("File saved and logged in with ID: {}".format(record_id))
         else:
-            print("No data saved.")
+            logger.warning("No data saved.")
 
         # Tell the rabbit the result.
         ch.basic_ack(delivery_tag=method.delivery_tag)

@@ -18,3 +18,6 @@ loggers:
   root:
     level: DEBUG
     handlers: [console]
+  steward:
+    level: DEBUG
+    handlers: [console]
