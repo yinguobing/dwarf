@@ -30,14 +30,14 @@ class FolderEventHandler(FileSystemEventHandler):
         self.messenger = messenger
 
     def on_created(self, event):
-        logger.debug("{}:{}".format(event.event_type, event.src_path))
+        logger.info("{}:{}".format(event.event_type, event.src_path))
         self.send_message(event.src_path)
 
     def on_modified(self, event):
-        logger.info("{}:{}".format(event.event_type, event.src_path))
+        logger.debug()("{}:{}".format(event.event_type, event.src_path))
 
     def on_deleted(self, event):
-        logger.debug("{}:{}".format(event.event_type, event.src_path))
+        logger.info()("{}:{}".format(event.event_type, event.src_path))
 
     def send_message(self, src_path):
         if not os.path.isdir(src_path):
@@ -67,7 +67,7 @@ class Porter:
     def start_watching(self):
         """Staring to watch the changes."""
         self.observer.start()
-        print(' [*] Monitoring... To exit press CTRL+C')
+        logger.info('[*] Monitoring...')
 
     def stop(self):
         """Let it go."""
