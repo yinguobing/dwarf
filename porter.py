@@ -30,7 +30,7 @@ class FolderEventHandler(FileSystemEventHandler):
         self.messenger = messenger
 
     def on_created(self, event):
-        logger.info("{}:{}".format(event.event_type, event.src_path))
+        logger.debug("{}:{}".format(event.event_type, event.src_path))
         self.send_message(event.src_path)
 
     def on_modified(self, event):
