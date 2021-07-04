@@ -25,7 +25,7 @@ JULIE = Clerk(CFG['mongodb']["host"],
               CFG['mongodb']['password'],
               CFG["mongodb"]['name'])
 
-# Employ a stocker to file the warehouse.
+# Employ a stocker to fill the warehouse.
 TOM = Stocker(CFG['dirs']['barn'],
               CFG['dirs']['warehouse'])
 
