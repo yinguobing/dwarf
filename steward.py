@@ -124,7 +124,7 @@ def get_tags(src_file, parse_func, max_num_try, timeout):
     return process_succeed, raw_tags
 
 
-def process(file_path):
+def process(src_file):
     """Process the sample file.
 
     Tasks: 
@@ -133,7 +133,7 @@ def process(file_path):
         - Create a valid record to be stored in the database.
 
     Args:
-        file_path:
+        src_file: the file to be processed.
 
     Returns:
         succeed: a flag indicating the process accomplished successfully.
@@ -144,17 +144,17 @@ def process(file_path):
 
     # The file may be of any format. Precheck it to get the correct parse
     # function and the DB collection name.
-    parse_func, collection_name = precheck(file_path)
+    parse_func, collection_name = precheck(src_file)
 
     # Make sure this file was not processed before.
-    hash_value = TOM.get_checksum(file_path)
+    hash_value = TOM.get_checksum(src_file)
     already_existed = JULIE.check_existence(hash_value, collection_name)
     if already_existed:
         print("Duplicated file detected.")
         return failure
 
     # Get the tags of the file.
-    succeed_tag, tags = get_tags(file_path,
+    succeed_tag, tags = get_tags(src_file,
                                  parse_func,
                                  CFG['monitor']['max_num_try'],
                                  CFG['monitor']['timeout'])
@@ -163,16 +163,16 @@ def process(file_path):
         return failure
 
     # Stock the file in the warehouse if any tag got.
-    succeed_file, new_path = TOM.stock(file_path)
+    succeed_file, dst_file = TOM.stock(src_file)
     if not succeed_file:
         print("Failed to move the file.")
         return failure
 
     # Create a database record and save it.
-    record = {"base_name": os.path.basename(file_path),
-              "path": new_path,
+    record = {"base_name": os.path.basename(src_file),
+              "path": dst_file,
               "hash": hash_value,
-              "file_size": os.stat(new_path).st_size,
+              "file_size": os.stat(dst_file).st_size,
               "index_time": datetime.datetime.utcnow(),
               "raw_tag": tags}
     JULIE.set_collection(collection_name)
@@ -180,7 +180,11 @@ def process(file_path):
         record_id = JULIE.keep_a_record(record)
     except:
         print("Failed to save in database.")
+        TOM.destry(dst_file)
         return failure
+    
+    # Finally, clean the original file.
+    TOM.destry(src_file)
 
     return True, record_id
 

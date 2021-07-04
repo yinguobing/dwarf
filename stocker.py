@@ -65,7 +65,7 @@ class Stocker:
 
         # Move the file to the warehouse.
         try:
-            new_path = shutil.move(src_file, dst_file)
+            new_path = shutil.copy2()(src_file, dst_file)
             succeed = True
         except:
             new_path = None
@@ -73,3 +73,7 @@ class Stocker:
             print("Can not move file.")
 
         return succeed, new_path
+
+    def destry(self, file_path):
+        """Destry a file."""
+        os.remove(file_path)
