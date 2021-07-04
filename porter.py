@@ -8,8 +8,6 @@ import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from rabbit import Rabbit
-
 # Load the configuration file.
 CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
 with open(CFG_FILE, 'r') as f:
@@ -18,11 +16,11 @@ with open(CFG_FILE, 'r') as f:
 
 class FolderEventHandler(FileSystemEventHandler):
 
-    def __init__(self, mq_address, queue):
+    def __init__(self, messenger):
         super().__init__()
 
         # Summon a rabbit.
-        self.PETER = Rabbit(address=mq_address, queue=queue, talking=True)
+        self.messenger = messenger
 
     def on_created(self, event):
         print(event.event_type, event.src_path)
@@ -36,28 +34,32 @@ class FolderEventHandler(FileSystemEventHandler):
 
     def send_message(self, src_path):
         if not os.path.isdir(src_path):
-            self.PETER.speak(src_path)
+            self.messenger.speak(src_path)
 
 
-if __name__ == "__main__":
-    # Where is the barn to watch? Make sure the folder already existed.
-    barn = CFG['dirs']['barn']
-    assert os.path.exists(barn), "Target folder not found, please check."
+class Porter:
 
-    # Setup the file observer.
-    observer = Observer()
-    event_handler = FolderEventHandler(mq_address=CFG['rabbitmq']['address'],
-                                       queue=CFG['rabbitmq']['queue'])
-    observer.schedule(event_handler, barn, recursive=True)
-    observer.start()
+    def __init__(self, target, messenger):
+        """A porter will watch any file changes in the target directory.
 
-    print(' [*] Monitoring... To exit press CTRL+C')
+        Args:
+            target: the directory to be watched.
+            messenger: a messanger to deliver messages.
+        """
+        # Where is the barn to watch? Make sure the folder already existed.
+        assert os.path.exists(target), "Target folder not found, please check."
 
-    # Let it go.
-    try:
-        while observer.is_alive():
-            observer.join(1)
-    except KeyboardInterrupt:
-        observer.stop()
+        # Setup the file observer.
+        self.observer = Observer()
+        self.event_handler = FolderEventHandler(messenger)
+        self.observer.schedule(self.event_handler, target, recursive=True)
 
-    observer.join()
+    def start_watching(self):
+        """Staring to watch the changes."""
+        self.observer.start()
+        print(' [*] Monitoring... To exit press CTRL+C')
+
+    def stop(self):
+        """Let it go."""
+        self.observer.stop()
+        self.observer.join()

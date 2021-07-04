@@ -9,6 +9,7 @@ import yaml
 from PIL import Image
 
 from clerk import Clerk
+from porter import Porter
 from rabbit import Rabbit
 from stocker import Stocker
 
@@ -27,6 +28,13 @@ JULIE = Clerk(CFG['mongodb']["host"],
 # Employ a stocker to fill the warehouse.
 TOM = Stocker(CFG['dirs']['barn'],
               CFG['dirs']['warehouse'])
+
+# Employ a porter to watch the barn for new files. Also a rabbit will be
+# provided for message delivering.
+JACK = Porter(CFG['dirs']['barn'],
+              Rabbit(address=CFG['rabbitmq']['address'],
+                     queue=CFG['rabbitmq']['queue'],
+                     talking=True))
 
 
 def get_video_tags(video_path):
@@ -126,7 +134,7 @@ def get_tags(src_file, parse_func, max_num_try, timeout):
 def process(src_file):
     """Process the sample file.
 
-    Tasks: 
+    Tasks:
         - Check if the file is valid and of interest.
         - Get the raw tags of the file and stock it the warehouse.
         - Create a valid record to be stored in the database.
@@ -209,7 +217,10 @@ def callback(ch, method, properties, body):
 
 
 if __name__ == '__main__':
+    # Start to watch any file changes in the barn.
+    JACK.start_watching()
 
+    # Start to process new files in the barn.
     try:
         # Summon a rabbit to deliver the mesages.
         PETER = Rabbit(address=CFG['rabbitmq']['address'],
@@ -220,10 +231,10 @@ if __name__ == '__main__':
         # Start listening..
         print(' [*] Waiting for messages. To exit press CTRL+C')
         PETER.start_listening()
-        
 
     except KeyboardInterrupt:
-        print('Interrupted')
+        JACK.stop()
+        print('Interrupted by keyboard.')
         try:
             sys.exit(0)
         except SystemExit:
