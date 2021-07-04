@@ -246,5 +246,5 @@ class Steward:
                              callback=self.callback)
 
         # Start listening..
-        print(' [*] Waiting for messages. To exit press CTRL+C')
+        logger.info('[*] Waiting for messages...')
         self.runner.start_listening()
