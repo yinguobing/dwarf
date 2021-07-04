@@ -1,5 +1,6 @@
-porter:
-  barn: /data/barn
+dirs:
+  barn: /Users/Robin/data/barn
+  warehouse: /Users/Robin/data/warehouse 
 
 rabbitmq:
   address: "localhost"
@@ -14,8 +15,11 @@ monitor:
   max_num_try: 3
 
 mongodb:
-  host: localhost
+  host: "localhost"
   port: 27017
   username: "mongoadmin"
   password: "secret"
-  db_name: "dwarf"
+  name: "dwarf"
+  collections:
+    images: "images"
+    videos: "videos"
