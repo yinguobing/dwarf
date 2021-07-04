@@ -22,3 +22,7 @@ class Stocker:
             all_files.extend([os.path.join(dirpath, f) for f in files])
 
         return all_files
+
+    def check_inventory(self):
+        """List all the files in the barn."""
+        return self.list_files(self.barn)
