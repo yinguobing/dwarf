@@ -65,7 +65,7 @@ class Stocker:
 
         # Move the file to the warehouse.
         try:
-            new_path = shutil.copy2()(src_file, dst_file)
+            new_path = shutil.copy2(src_file, dst_file)
             succeed = True
         except:
             new_path = None
