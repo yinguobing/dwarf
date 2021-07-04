@@ -1,6 +1,7 @@
 """The watchdog watches the barn for any file changes."""
 
 import logging
+import logging.config
 import os
 import sys
 
@@ -9,6 +10,10 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 from rabbit import Rabbit
+
+# Setup the logger.
+logging.config.dictConfig(yaml.load(open("logging.yml", 'r'), yaml.FullLoader))
+logger = logging.getLogger('porter')
 
 # Load the configuration file.
 CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
@@ -25,14 +30,14 @@ class FolderEventHandler(FileSystemEventHandler):
         self.messenger = messenger
 
     def on_created(self, event):
-        print(event.event_type, event.src_path)
+        logger.debug("{}:{}".format(event.event_type, event.src_path))
         self.send_message(event.src_path)
 
     def on_modified(self, event):
-        pass
+        logger.info("{}:{}".format(event.event_type, event.src_path))
 
     def on_deleted(self, event):
-        print(event.event_type, event.src_path)
+        logger.debug("{}:{}".format(event.event_type, event.src_path))
 
     def send_message(self, src_path):
         if not os.path.isdir(src_path):
