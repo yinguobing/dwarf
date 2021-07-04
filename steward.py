@@ -222,15 +222,13 @@ class Steward:
         """This is the function that was called when a message is received."""
         # Get the full file path.
         src_file = body.decode()
-
-        logger.debug('_' * 65)
-        logger.debug("File created: {}".format(src_file))
+        logger.info("File created: {}".format(src_file))
 
         # Try to process the source file.
         succeed, record_id = self.process(src_file)
 
         if succeed:
-            print("File saved and logged in with ID: {}".format(record_id))
+            logger.info("File saved and logged in with ID: {}".format(record_id))
         else:
             logger.warning("No data saved.")
 
