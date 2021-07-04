@@ -56,6 +56,7 @@ class Steward:
             file_path: the full path of the file to be checked.
 
         Returns:
+            succeed: true if the file is valid.
             parse_func: the parse function to be used.
             collection_name: the collection name this file's record should be saved.
         """
@@ -64,6 +65,7 @@ class Steward:
 
         if suffix not in supported_types:
             print("Unknown file type: {}".format(file_path))
+            return False, None, None
         else:
             if suffix in CFG['video_types']:
                 parse_func = get_video_tags
@@ -72,7 +74,7 @@ class Steward:
                 parse_func = get_image_tags
                 collection_name = CFG["mongodb"]["collections"]["images"]
 
-        return parse_func, collection_name
+        return True, parse_func, collection_name
 
     def get_tags(self, src_file, parse_func, max_num_try, timeout):
         """Get the tags from the source file.
@@ -120,6 +122,21 @@ class Steward:
 
         return process_succeed, raw_tags
 
+    def get_manual_tags(self, src_file):
+        """Get the manual tags from a tag file."""
+        common_prefix = CFG['dirs']['barn'].rstrip(os.path.sep)
+        job_dir_name = src_file[len(common_prefix):].split(os.path.sep)[1]
+        tag_file = os.path.join(common_prefix, job_dir_name, 'tags.txt')
+        if os.path.exists(tag_file):
+            with open(tag_file, 'r') as f:
+                tags = f.readline().split(' ')
+                succeed = True
+        else:
+            tags = None
+            succeed = False
+
+        return succeed, tags
+
     def process(self, src_file):
         """Process the sample file.
 
@@ -140,7 +157,9 @@ class Steward:
 
         # The file may be of any format. Precheck it to get the correct parse
         # function and the DB collection name.
-        parse_func, collection_name = self.precheck(src_file)
+        succeed, parse_func, collection_name = self.precheck(src_file)
+        if not succeed:
+            return failure
 
         # Make sure this file was not processed before.
         hash_value = self.stocker.get_checksum(src_file)
@@ -151,18 +170,24 @@ class Steward:
             return failure
 
         # Get the tags of the file.
-        succeed_tag, tags = self.get_tags(src_file,
+        succeed, raw_tags = self.get_tags(src_file,
                                           parse_func,
                                           CFG['monitor']['max_num_try'],
                                           CFG['monitor']['timeout'])
-        if not succeed_tag:
+        if not succeed:
             print("Failed to get file tags.")
             return failure
 
         # Stock the file in the warehouse if any tag got.
-        succeed_file, dst_file = self.stocker.stock(src_file)
-        if not succeed_file:
+        succeed, dst_file = self.stocker.stock(src_file)
+        if not succeed:
             print("Failed to move the file.")
+            return failure
+
+        # Try to get the manual tags.
+        succeed, manual_tags = self.get_manual_tags(src_file)
+        if not succeed:
+            print("Manual tag file not found. This file will not be processed.")
             return failure
 
         # Create a database record and save it.
@@ -171,7 +196,8 @@ class Steward:
                   "hash": hash_value,
                   "file_size": os.stat(dst_file).st_size,
                   "index_time": datetime.datetime.utcnow(),
-                  "raw_tag": tags}
+                  "raw_tag": raw_tags,
+                  "manual_tags": manual_tags}
         self.clark.set_collection(collection_name)
         try:
             record_id = self.clark.keep_a_record(record)
