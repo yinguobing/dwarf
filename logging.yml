@@ -21,3 +21,6 @@ loggers:
   steward:
     level: INFO
     handlers: [console]
+  stocker:
+    level: INFO
+    handlers: [console]

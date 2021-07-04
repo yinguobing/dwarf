@@ -1,4 +1,7 @@
 """A stocker moves the data from the barn to the warehouse."""
+
+import logging
+import logging.config
 import os
 import shutil
 import sys
@@ -7,6 +10,10 @@ from hashlib import md5 as hash_func
 import yaml
 
 RACK = "originals"
+
+# Setup the logger.
+logging.config.dictConfig(yaml.load(open("logging.yml", 'r'), yaml.FullLoader))
+logger = logging.getLogger('stocker')
 
 # Load the configuration file.
 CFG_FILE = sys.argv[1] if len(sys.argv) > 1 else 'config.yml'
@@ -70,7 +77,7 @@ class Stocker:
         except:
             new_path = None
             succeed = False
-            print("Can not move file.")
+            logger.warning("Can not move file {}".format(src_file))
 
         return succeed, new_path
 
