@@ -17,8 +17,7 @@ with open(CFG_FILE, 'r') as f:
 
 if __name__ == "__main__":
 
-    # Employ a porter to watch the barn for new files. Also a rabbit will be
-    # provided for message delivering.
+    # Employ a porter to watch the barn for new files.
     Jack = Porter(CFG['dirs']['barn'])
 
     # Employ a stocker to fill the warehouse.
@@ -40,4 +39,4 @@ if __name__ == "__main__":
         Jack.start_watching()
         Andrew.start_processing()
     except KeyboardInterrupt:
-        print("Interupted bu keyboard input.")
+        print("Interupted by keyboard.")
