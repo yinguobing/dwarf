@@ -68,10 +68,10 @@ class Steward:
             collection_name: the collection name this file's record should be saved.
         """
         supported_types = CFG['video_types'] + CFG['image_types']
-        suffix = get_file_type(file_path)
+        suffix = get_file_type(file_path).lower()
 
         if suffix not in supported_types:
-            logger.warning("Unknown file type: {}".format(file_path))
+            logger.debug("{}: Unknown file type.".format(file_path))
             return False, None, None
         else:
             if suffix in CFG['video_types']:
@@ -104,11 +104,11 @@ class Steward:
         while True:
 
             if num_try >= max_num_try:
-                logger.warning("Can not open file. Tried 3 times.")
+                logger.debug("Can not open file. Tried 3 times.")
                 break
 
             if seconds_wait >= timeout:
-                logger.warning("Can not open file. Timeout for 30 seconds.")
+                logger.debug("Open file timeout: {} seconds.".format(timeout))
                 break
 
             if not os.path.exists(src_file):
@@ -124,7 +124,7 @@ class Steward:
             except FileNotFoundError:
                 logger.error("FFMPEG not installed correctly.")
             except:
-                logger.warning("Failed to open file. Try again...")
+                logger.debug("Failed to open file. Try again...")
                 # Wait for a moment so that the file could be fully created.
                 time.sleep(3)
                 continue
@@ -159,12 +159,11 @@ class Steward:
             opt_author_file) else root_author_file
 
         if not os.path.exists(tag_file):
-            logger.warning("Tag file not found.")
+            logger.debug("Tag file not found.")
             return failure
 
         if not os.path.exists(author_file):
-            logger.warning(
-                "Author file not found.")
+            logger.debug("Author file not found.")
             return failure
 
         return True, tag_file, author_file
@@ -208,6 +207,7 @@ class Steward:
         # function and the DB collection name.
         succeed, parse_func, collection_name = self.precheck(src_file)
         if not succeed:
+            logger.warning("File format not supported.")
             return failure
 
         # Make sure this file was not processed before.
@@ -236,8 +236,7 @@ class Steward:
         # Try to get the manual tags and authors. This is mandatory.
         succeed, manual_tags, authors = self.get_manual_tags(src_file)
         if not succeed:
-            logger.warning(
-                "Failed to get manual tags and authors.")
+            logger.warning("Failed to get manual tags and authors.")
             return failure
 
         # Create a database record and save it.

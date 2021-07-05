@@ -37,7 +37,7 @@ class FolderEventHandler(FileSystemEventHandler):
         logger.debug("{}:{}".format(event.event_type, event.src_path))
 
     def on_deleted(self, event):
-        logger.info("{}:{}".format(event.event_type, event.src_path))
+        logger.debug("{}:{}".format(event.event_type, event.src_path))
 
     def send_message(self, src_path):
         if not os.path.isdir(src_path):

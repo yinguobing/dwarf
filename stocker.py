@@ -74,11 +74,11 @@ class Stocker:
         try:
             new_path = shutil.copy2(src_file, dst_file)
             succeed = True
-            logger.debug("File saved: {}".format(new_path))
+            logger.debug("{}: File saved.".format(new_path))
         except:
             new_path = None
             succeed = False
-            logger.debug("Can not move file {}".format(src_file))
+            logger.debug("{}: Failed to move.".format(src_file))
 
         return succeed, new_path
 
