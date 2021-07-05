@@ -9,6 +9,8 @@ from hashlib import md5 as hash_func
 
 import yaml
 
+from rabbit import Rabbit
+
 RACK = "originals"
 
 # Setup the logger.
@@ -32,6 +34,9 @@ class Stocker:
         """
         self.barn = barn
         self.warehouse = warehouse
+        self.rabbit = Rabbit(address=CFG['rabbitmq']['address'],
+                             queue=CFG['rabbitmq']['queue'],
+                             talking=True)
 
     def list_files(self, dir):
         """List all the files in the dir."""
@@ -43,7 +48,13 @@ class Stocker:
 
     def check_inventory(self):
         """List all the files in the barn."""
-        return self.list_files(self.barn)
+        files = self.list_files(self.barn)
+
+        # If any job left, tell people.
+        if files:
+            logger.debug("New files discovered: {}".format(len(files)))
+            for new_file in files:
+                self.rabbit.speak(new_file)
 
     def get_checksum(self, file_path):
         """Get the hash value of the input file."""

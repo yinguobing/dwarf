@@ -185,6 +185,11 @@ class Steward:
 
         return succeed, tags, authors
 
+    def is_secret_mission(self, src_file):
+        """A secret mission."""
+        _, tail = os.path.split(src_file)
+        return True if tail == 'dwarf.run' else False
+
     def process(self, src_file):
         """Process the sample file.
 
@@ -202,6 +207,13 @@ class Steward:
         """
         # Mark the initial state to False to save a lot lines of code.
         failure = False, None
+
+        # In case there is a secret mission.
+        if self.is_secret_mission(src_file):
+            self.stocker.destry(src_file) 
+            self.stocker.check_inventory()  
+            logger.info("Secret mission.")
+            return failure
 
         # The file may be of any format. Precheck it to get the correct parse
         # function and the DB collection name.
