@@ -131,20 +131,60 @@ class Steward:
 
         return process_succeed, raw_tags
 
+    def get_tag_files(self, src_file):
+        """Return the tag files of the current file.
+
+        There are two kind of tag files. The first kind are those stored in the 
+        root directory of the new files and are mandatory. The other kind are 
+        tag files stored in the same directory of the src file, and are optional.
+        If these two kind of files both exist, the first kind are ignored.
+        """
+        failure = False, None, None
+
+        # First get the optional tag file and author file.
+        current_dir, _ = os.path.split(src_file)
+        opt_tag_file = os.path.join(current_dir, 'tags.txt')
+        opt_author_file = os.path.join(current_dir, 'authors.txt')
+
+        # Then get the root tag file and author file.
+        barn = CFG['dirs']['barn'].rstrip(os.path.sep)
+        root_dir = src_file[len(barn):].split(os.path.sep)[1]
+        root_tag_file = os.path.join(barn, root_dir, 'tags.txt')
+        root_author_file = os.path.join(barn, root_dir, 'authors.txt')
+
+        # Only return the desired files.
+        tag_file = opt_tag_file if os.path.exists(
+            opt_tag_file) else root_tag_file
+        author_file = opt_author_file if os.path.exists(
+            opt_author_file) else root_author_file
+
+        if not os.path.exists(tag_file):
+            logger.warning("Tag file not found.")
+            return failure
+
+        if not os.path.exists(author_file):
+            logger.warning(
+                "Author file not found.")
+            return failure
+
+        return True, tag_file, author_file
+
     def get_manual_tags(self, src_file):
-        """Get the manual tags from a tag file."""
-        common_prefix = CFG['dirs']['barn'].rstrip(os.path.sep)
-        job_dir_name = src_file[len(common_prefix):].split(os.path.sep)[1]
-        tag_file = os.path.join(common_prefix, job_dir_name, 'tags.txt')
-        if os.path.exists(tag_file):
+        """Get the manual tags from the tag file and author file."""
+        file_got, tag_file, author_file = self.get_tag_files(src_file)
+
+        if file_got:
             with open(tag_file, 'r') as f:
                 tags = f.readline().split(' ')
-                succeed = True
+            with open(author_file, 'r') as f:
+                authors = f.readline().split(' ')
+            succeed = True
         else:
             tags = None
+            authors = None
             succeed = False
 
-        return succeed, tags
+        return succeed, tags, authors
 
     def process(self, src_file):
         """Process the sample file.
@@ -180,11 +220,11 @@ class Steward:
 
         # Get the tags of the file.
         succeed, raw_tags = self.get_raw_tags(src_file,
-                                          parse_func,
-                                          CFG['monitor']['max_num_try'],
-                                          CFG['monitor']['timeout'])
+                                              parse_func,
+                                              CFG['monitor']['max_num_try'],
+                                              CFG['monitor']['timeout'])
         if not succeed:
-            logger.warning("Failed to get file tags.")
+            logger.warning("Failed to get file format tags.")
             return failure
 
         # Stock the file in the warehouse if any tag got.
@@ -193,10 +233,11 @@ class Steward:
             logger.warning("Failed to move the file.")
             return failure
 
-        # Try to get the manual tags.
-        succeed, manual_tags = self.get_manual_tags(src_file)
+        # Try to get the manual tags and authors. This is mandatory.
+        succeed, manual_tags, authors = self.get_manual_tags(src_file)
         if not succeed:
-            logger.warning("Manual tag file not found. This file will not be processed.")
+            logger.warning(
+                "Failed to get manual tags and authors.")
             return failure
 
         # Create a database record and save it.
@@ -206,7 +247,9 @@ class Steward:
                   "file_size": os.stat(dst_file).st_size,
                   "index_time": datetime.datetime.utcnow(),
                   "raw_tag": raw_tags,
-                  "manual_tags": manual_tags}
+                  "manual_tags": manual_tags,
+                  "authors": authors}
+
         self.clark.set_collection(collection_name)
         try:
             record_id = self.clark.keep_a_record(record)
@@ -230,9 +273,10 @@ class Steward:
         succeed, record_id = self.process(src_file)
 
         if succeed:
-            logger.info("File saved and logged in with ID: {}".format(record_id))
+            logger.info("[✓] File logged with ID: {}".format(record_id))
         else:
-            logger.warning("No data saved.")
+            logger.warning(
+                "[✕] File not processed. Check above logs for details.")
 
         # Tell the rabbit the result.
         ch.basic_ack(delivery_tag=method.delivery_tag)
