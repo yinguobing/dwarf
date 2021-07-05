@@ -83,7 +83,7 @@ class Steward:
 
         return True, parse_func, collection_name
 
-    def get_tags(self, src_file, parse_func, max_num_try, timeout):
+    def get_raw_tags(self, src_file, parse_func, max_num_try, timeout):
         """Get the tags from the source file.
 
         Args:
@@ -179,7 +179,7 @@ class Steward:
             return failure
 
         # Get the tags of the file.
-        succeed, raw_tags = self.get_tags(src_file,
+        succeed, raw_tags = self.get_raw_tags(src_file,
                                           parse_func,
                                           CFG['monitor']['max_num_try'],
                                           CFG['monitor']['timeout'])
