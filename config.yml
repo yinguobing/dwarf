@@ -1,10 +1,10 @@
 dirs:
-  barn: /Users/Robin/data/barn
-  warehouse: /Users/Robin/data/warehouse 
+  barn: /data/barn
+  warehouse: /data/warehouse 
 
 rabbitmq:
   address: "localhost"
-  queue: "file_list"
+  queue: "dwarf"
 
 video_types: ["avi", "mp4"]
 
@@ -17,7 +17,7 @@ monitor:
 mongodb:
   host: "localhost"
   port: 27017
-  username: "mongoadmin"
+  username: "dwarf"
   password: "secret"
   name: "dwarf"
   collections:
