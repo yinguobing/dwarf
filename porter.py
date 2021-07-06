@@ -31,13 +31,16 @@ class FolderEventHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         logger.debug("{}:{}".format(event.event_type, event.src_path))
-        self.send_message(event.src_path)
 
     def on_modified(self, event):
         logger.debug("{}:{}".format(event.event_type, event.src_path))
 
     def on_deleted(self, event):
         logger.debug("{}:{}".format(event.event_type, event.src_path))
+
+    def on_closed(self, event):
+        logger.debug("{}:{}".format(event.event_type, event.src_path))
+        self.send_message(event.src_path)
 
     def send_message(self, src_path):
         if not os.path.isdir(src_path):
