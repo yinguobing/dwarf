@@ -13,7 +13,8 @@ class Clerk:
         """
         self.client = MongoClient(address, port,
                                   username=username,
-                                  password=password)
+                                  password=password,
+                                  authSource=name)
         self.db = self.client.get_database(name)
 
     def set_collection(self, name):
