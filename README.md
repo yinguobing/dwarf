@@ -58,6 +58,14 @@ image_types: ["jpg", "jpeg", "png", "gif", "bmp"]
 
 ### Setup the RabbitMQ
 
+You can install RabbitMQ by following the official instructions. Or, you can run a quick instance with docker. Please note the default port `5672` will be used.
+
+```bash
+sudo docker run -d --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+```
+
+Then, setup the rabbit in the config file:
+
 ```yaml
 rabbitmq:
   address: "localhost"
@@ -65,6 +73,14 @@ rabbitmq:
 ```
 
 ### Setup the database
+
+First you need to setup a databse manually for dwarf to use. Here is an example:
+
+- the database could be reached by host `localhost` and port `27017`.
+- the database is authorized by username `mongoadmin` and password `secret`.
+- the database name is `dwarf`
+
+You can set the collection name for videos and images here.
 
 ```yaml
 mongodb:
@@ -79,6 +95,8 @@ mongodb:
 ```
 
 ## Running
+
+Make sure the current use has the permission of writing files in `barn` and `warehouse`, then run:
 
 ```bash
 python3 main.py
