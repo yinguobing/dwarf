@@ -1,4 +1,12 @@
+import logging
+import logging.config
+import yaml
+
 from pymongo import MongoClient
+
+# Setup the logger.
+logging.config.dictConfig(yaml.load(open("logging.yml", 'r'), yaml.FullLoader))
+logger = logging.getLogger('stocker')
 
 
 class Clerk:
@@ -16,6 +24,10 @@ class Clerk:
                                   password=password,
                                   authSource=name)
         self.db = self.client.get_database(name)
+        try:
+            self.db.get_collection("images").find_one()
+        except:
+            logger.error("Failed to read database, please check.")
 
     def set_collection(self, name):
         """Get the collection by name"""
