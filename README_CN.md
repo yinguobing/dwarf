@@ -1,6 +1,8 @@
-# Dwarf
-
-视频与图像数据的自动化整理与标记。
+<div align="center">
+  <img src="https://user-images.githubusercontent.com/10267910/123536153-28b6da80-d75b-11eb-90ff-4b9e5a7d7d8c.png">
+  <h1>Dwarf</h1>
+  视频与图像数据的自动化整理与标记。
+</div>
 
 ## 功能
 
@@ -68,7 +70,7 @@ Dwarf使用配置文件 `config.yml` 来设定服务行为。可以使用任意�
 Dwarf服务当前会使用两个目录。
 
 第一个目录是 `barn`，待处理的文件需要放置在此文件夹中。
-第二个目录时 `warehouse` ，处理后的文件会存储在此文件夹中。
+第二个目录是 `warehouse` ，处理后的文件会存储在此文件夹中。
 
 ```yaml
 dirs:
