@@ -29,3 +29,6 @@ loggers:
   stocker:
     level: INFO
     handlers: [console, file]
+  rabbit:
+    level: INFO
+    handlers: [console, file] 
