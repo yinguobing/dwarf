@@ -1,5 +1,13 @@
 """This module provides the implementation of the message queue."""
+import logging
+import logging.config
+
 import pika
+import yaml
+
+# Setup the logger.
+logging.config.dictConfig(yaml.load(open("logging.yml", 'r'), yaml.FullLoader))
+logger = logging.getLogger('rabbit')
 
 
 class Rabbit:
@@ -28,11 +36,18 @@ class Rabbit:
 
     def speak(self, message):
         """Send a mesage."""
-        self.channel.basic_publish(
-            exchange='',
-            routing_key=self.queue,
-            body=message,
-            properties=pika.BasicProperties(delivery_mode=2))
+        try:
+            self.channel.basic_publish(
+                exchange='',
+                routing_key=self.queue,
+                body=message,
+                properties=pika.BasicProperties(delivery_mode=2))
+            succeed = True
+        except pika.exceptions.StreamLostError:
+            logger.error("The rabbit can not speak, please check.")
+            succeed = False
+
+        return succeed
 
     def start_listening(self):
         """Listen to the comming messages."""
