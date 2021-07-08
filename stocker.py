@@ -59,8 +59,18 @@ class Stocker:
 
     def get_checksum(self, file_path):
         """Get the hash value of the input file."""
-        with open(file_path, 'rb') as f:
-            return hash_func(f.read()).hexdigest()
+        failure = False, None
+
+        try:
+            with open(file_path, 'rb') as f:
+                return True, hash_func(f.read()).hexdigest()
+        except PermissionError:
+            logger.debug(
+                "{}: Failed to open file, permission denied".format(file_path))
+            return failure
+        except:
+            logger.debug("{}: Failed to hash file.".format(file_path))
+            return failure
 
     def stock(self, src_file):
         """Stock the warehouse with the target file.
@@ -90,11 +100,11 @@ class Stocker:
             succeed = True
             logger.debug("{}: File saved.".format(new_path))
         except PermissionError:
-            logger.warning(
+            logger.debug(
                 "{}: Failed to copy file, permission denied".format(src_file))
             return failure
         except:
-            logger.warning("{}: Failed to copy file.".format(src_file))
+            logger.debug("{}: Failed to copy file.".format(src_file))
             return failure
 
         return succeed, new_path
@@ -105,9 +115,9 @@ class Stocker:
             os.remove(file_path)
             return True
         except PermissionError:
-            logger.warning(
+            logger.debug(
                 "{}: Failed to remove file, permission denied".format(file_path))
             return False
         except:
-            logger.warning("{}: Failed to copy file.".format(file_path))
+            logger.debug("{}: Failed to copy file.".format(file_path))
             return False

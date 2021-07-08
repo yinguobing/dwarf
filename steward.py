@@ -212,7 +212,7 @@ class Steward:
         if self.is_secret_mission(src_file):
             self.stocker.destry(src_file)
             self.stocker.check_inventory()
-            logger.info("Secret mission.")
+            logger.info("=★= Secret Mission =★=")
             return failure
 
         # The file may be of any format. Precheck it to get the correct parse
@@ -223,7 +223,10 @@ class Steward:
             return failure
 
         # Make sure this file was not processed before.
-        hash_value = self.stocker.get_checksum(src_file)
+        succeed, hash_value = self.stocker.get_checksum(src_file)
+        if not succeed:
+            logger.warning("Falied to get the hash checksum.")
+            return failure
         already_existed = self.clark.check_existence(
             hash_value, collection_name)
         if already_existed:
@@ -280,7 +283,7 @@ class Steward:
         """This is the function that was called when a message is received."""
         # Get the full file path.
         src_file = body.decode()
-        logger.info("File created: {}".format(src_file))
+        logger.info("[*] File created: {}".format(src_file))
 
         # Try to process the source file.
         succeed, record_id = self.process(src_file)
