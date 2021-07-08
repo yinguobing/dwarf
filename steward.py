@@ -210,8 +210,8 @@ class Steward:
 
         # In case there is a secret mission.
         if self.is_secret_mission(src_file):
-            self.stocker.destry(src_file) 
-            self.stocker.check_inventory()  
+            self.stocker.destry(src_file)
+            self.stocker.check_inventory()
             logger.info("Secret mission.")
             return failure
 
@@ -295,11 +295,12 @@ class Steward:
     def start_processing(self):
         """Start to process new files in the barn"""
         # Summon a rabbit to deliver the mesages.
-        self.runner = Rabbit(address=CFG['rabbitmq']['address'],
-                             queue=CFG['rabbitmq']['queue'],
-                             talking=False,
-                             callback=self.callback)
+        self._rabbit = Rabbit(address=CFG['rabbitmq']['host'],
+                              port=CFG['rabbitmq']['port'],
+                              queue=CFG['rabbitmq']['queue'],
+                              talking=False,
+                              callback=self.callback)
 
         # Start listening..
         logger.info('[*] Waiting for messages...')
-        self.runner.start_listening()
+        self._rabbit.start_listening()

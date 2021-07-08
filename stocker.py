@@ -34,9 +34,10 @@ class Stocker:
         """
         self.barn = barn
         self.warehouse = warehouse
-        self.rabbit = Rabbit(address=CFG['rabbitmq']['address'],
-                             queue=CFG['rabbitmq']['queue'],
-                             talking=True)
+        self._rabbit = Rabbit(address=CFG['rabbitmq']['host'],
+                              port=CFG['rabbitmq']['port'],
+                              queue=CFG['rabbitmq']['queue'],
+                              talking=True)
 
     def list_files(self, dir):
         """List all the files in the dir."""
@@ -54,7 +55,7 @@ class Stocker:
         if files:
             logger.debug("New files discovered: {}".format(len(files)))
             for new_file in files:
-                self.rabbit.speak(new_file)
+                self._rabbit.speak(new_file)
 
     def get_checksum(self, file_path):
         """Get the hash value of the input file."""

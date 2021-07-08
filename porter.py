@@ -58,13 +58,14 @@ class Porter:
         # Where is the barn to watch? Make sure the folder already existed.
         assert os.path.exists(target), "Target folder not found, please check."
 
-        messenger = Rabbit(address=CFG['rabbitmq']['address'],
-                           queue=CFG['rabbitmq']['queue'],
-                           talking=True)
+        self._rabbit = Rabbit(address=CFG['rabbitmq']['host'],
+                              port=CFG['rabbitmq']['port'],
+                              queue=CFG['rabbitmq']['queue'],
+                              talking=True)
 
         # Setup the file observer.
         self.observer = Observer()
-        self.event_handler = FolderEventHandler(messenger)
+        self.event_handler = FolderEventHandler(self._rabbit)
         self.observer.schedule(self.event_handler, target, recursive=True)
 
     def start_watching(self):

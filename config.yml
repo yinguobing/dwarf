@@ -3,7 +3,8 @@ dirs:
   warehouse: /data/warehouse 
 
 rabbitmq:
-  address: "localhost"
+  host: "localhost"
+  port: 5672
   queue: "dwarf"
 
 video_types: ["avi", "mp4"]
