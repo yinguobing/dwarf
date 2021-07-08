@@ -219,18 +219,18 @@ class Steward:
         # function and the DB collection name.
         succeed, parse_func, collection_name = self.precheck(src_file)
         if not succeed:
-            logger.warning("File format not supported.")
+            logger.warning("  - File format not supported.")
             return failure
 
         # Make sure this file was not processed before.
         succeed, hash_value = self.stocker.get_checksum(src_file)
         if not succeed:
-            logger.warning("Falied to get the hash checksum.")
+            logger.warning("  - Falied to get the hash checksum.")
             return failure
         already_existed = self.clark.check_existence(
             hash_value, collection_name)
         if already_existed:
-            logger.warning("Duplicated file detected.")
+            logger.warning("  - Duplicated file detected.")
             return failure
 
         # Get the tags of the file.
@@ -239,19 +239,19 @@ class Steward:
                                               CFG['monitor']['max_num_try'],
                                               CFG['monitor']['timeout'])
         if not succeed:
-            logger.warning("Failed to get file format tags.")
+            logger.warning("  - Failed to get file format tags.")
             return failure
 
         # Stock the file in the warehouse if any tag got.
         succeed, dst_file = self.stocker.stock(src_file)
         if not succeed:
-            logger.warning("Failed to move the file.")
+            logger.warning("  - Failed to move the file.")
             return failure
 
         # Try to get the manual tags and authors. This is mandatory.
         succeed, manual_tags, authors = self.get_manual_tags(src_file)
         if not succeed:
-            logger.warning("Failed to get manual tags and authors.")
+            logger.warning("  - Failed to get manual tags and authors.")
             return failure
 
         # Create a database record and save it.
@@ -268,14 +268,14 @@ class Steward:
         try:
             record_id = self.clark.keep_a_record(record)
         except:
-            logger.warning("Failed to save in database.")
+            logger.warning("  - Failed to save in database.")
             self.stocker.destry(dst_file)
             return failure
 
         # Finally, clean the original file.
         if not self.stocker.destry(src_file):
             logger.warning(
-                "Failed to remove the source file. You can remove it manually.")
+                "  - Failed to remove the source file. You can remove it manually.")
 
         return True, record_id
 
