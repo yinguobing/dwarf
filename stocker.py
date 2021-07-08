@@ -85,7 +85,11 @@ class Stocker:
         failure = False, None
 
         # Get the new path of the file.
-        hash_value = self.get_checksum(src_file)
+        hash_got, hash_value = self.get_checksum(src_file)
+        if not hash_got:
+            logger.debug("Failed to get the hash value.")
+            return failure
+
         new_name = hash_value + os.path.splitext(src_file)[-1]
         dst_dir = os.path.join(CFG["dirs"]["warehouse"], RACK, hash_value[0])
 
