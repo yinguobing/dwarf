@@ -270,7 +270,9 @@ class Steward:
             return failure
 
         # Finally, clean the original file.
-        self.stocker.destry(src_file)
+        if not self.stocker.destry(src_file):
+            logger.warning(
+                "Failed to remove the source file. You can remove it manually.")
 
         return True, record_id
 

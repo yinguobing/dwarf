@@ -72,6 +72,8 @@ class Stocker:
             succeed: a flag indicating the process succeeds.
             target: the full path of the target file saved.
         """
+        failure = False, None
+
         # Get the new path of the file.
         hash_value = self.get_checksum(src_file)
         new_name = hash_value + os.path.splitext(src_file)[-1]
@@ -87,13 +89,25 @@ class Stocker:
             new_path = shutil.copy2(src_file, dst_file)
             succeed = True
             logger.debug("{}: File saved.".format(new_path))
+        except PermissionError:
+            logger.warning(
+                "{}: Failed to copy file, permission denied".format(src_file))
+            return failure
         except:
-            new_path = None
-            succeed = False
-            logger.debug("{}: Failed to move.".format(src_file))
+            logger.warning("{}: Failed to copy file.".format(src_file))
+            return failure
 
         return succeed, new_path
 
     def destry(self, file_path):
         """Destry a file."""
-        os.remove(file_path)
+        try:
+            os.remove(file_path)
+            return True
+        except PermissionError:
+            logger.warning(
+                "{}: Failed to remove file, permission denied".format(file_path))
+            return False
+        except:
+            logger.warning("{}: Failed to copy file.".format(file_path))
+            return False
