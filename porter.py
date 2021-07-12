@@ -57,6 +57,7 @@ class Porter:
         """
         # Where is the barn to watch? Make sure the folder already existed.
         assert os.path.exists(target), "Target folder not found, please check."
+        self._target = target
 
         self._rabbit = Rabbit(address=CFG['rabbitmq']['host'],
                               port=CFG['rabbitmq']['port'],
@@ -71,9 +72,10 @@ class Porter:
     def start_watching(self):
         """Staring to watch the changes."""
         self.observer.start()
-        logger.info('[*] Monitoring...')
+        logger.info('[*] Monitoring... {}'.format(self._target))
 
     def stop(self):
         """Let it go."""
         self.observer.stop()
         self.observer.join()
+        logger.info("[*] Monitoring stopped.")
