@@ -32,3 +32,6 @@ loggers:
   rabbit:
     level: INFO
     handlers: [console, file] 
+  clerk:
+    level: INFO
+    handlers: [console, file]

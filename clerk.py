@@ -6,7 +6,7 @@ from pymongo import MongoClient
 
 # Setup the logger.
 logging.config.dictConfig(yaml.load(open("logging.yml", 'r'), yaml.FullLoader))
-logger = logging.getLogger('stocker')
+logger = logging.getLogger('clerk')
 
 
 class Clerk:
