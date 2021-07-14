@@ -186,10 +186,18 @@ class Steward:
 
         return succeed, tags, authors
 
-    def is_secret_mission(self, src_file):
-        """A secret mission."""
+    def switch_running(self, src_file):
+        """Start or stop the processing."""
         _, tail = os.path.split(src_file)
-        return True if tail == 'dwarf.run' else False
+        if tail == 'dwarf.run':
+            self.stocker.destry(src_file)
+            self.stocker.check_inventory()
+            logger.info("[*] Processing...")
+            self.running = True
+        elif tail == 'dwarf.stop':
+            self.stocker.destry(src_file)
+            logger.info("[*] Processing stopped.")
+            self.running = False
 
     def process(self, src_file):
         """Process the sample file.
@@ -288,13 +296,9 @@ class Steward:
             else:
                 logger.warning(
                     " ✕  Skipped.")
-        
+
         # Let the process begin only if a secret is matched.
-        if self.is_secret_mission(src_file):
-            self.stocker.destry(src_file)
-            self.stocker.check_inventory()
-            logger.info("[*] Processing...")
-            self.running = True
+        self.switch_running(src_file)
 
         # Tell the rabbit the result.
         ch.basic_ack(delivery_tag=method.delivery_tag)
