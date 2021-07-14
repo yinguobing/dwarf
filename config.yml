@@ -1,6 +1,6 @@
 dirs:
-  barn: /data/barn
-  warehouse: /data/warehouse 
+  barn: /Users/Robin/data/barn
+  warehouse: /Users/Robin/data/warehouse 
 
 rabbitmq:
   host: "localhost"

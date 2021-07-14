@@ -31,6 +31,8 @@ class FolderEventHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         logger.debug("{}:{}".format(event.event_type, event.src_path))
+        if not event.is_directory:
+            self.messenger.speak(event.src_path)
 
     def on_modified(self, event):
         logger.debug("{}:{}".format(event.event_type, event.src_path))
@@ -40,11 +42,6 @@ class FolderEventHandler(FileSystemEventHandler):
 
     def on_closed(self, event):
         logger.debug("{}:{}".format(event.event_type, event.src_path))
-        self.send_message(event.src_path)
-
-    def send_message(self, src_path):
-        if not os.path.isdir(src_path):
-            self.messenger.speak(src_path)
 
 
 class Porter:

@@ -52,6 +52,7 @@ class Steward:
         """
         self.stocker = stocker
         self.clark = clark
+        self.running = False
 
     def precheck(self, file_path):
         """Check the src file and return the parse function and the collection name.
@@ -208,29 +209,22 @@ class Steward:
         # Mark the initial state to False to save a lot lines of code.
         failure = False, None
 
-        # In case there is a secret mission.
-        if self.is_secret_mission(src_file):
-            self.stocker.destry(src_file)
-            self.stocker.check_inventory()
-            logger.info("=★= Secret Mission =★=")
-            return failure
-
         # The file may be of any format. Precheck it to get the correct parse
         # function and the DB collection name.
         succeed, parse_func, collection_name = self.precheck(src_file)
         if not succeed:
-            logger.warning("    File format not supported.")
+            logger.warning("    Format not supported.")
             return failure
 
         # Make sure this file was not processed before.
         succeed, hash_value = self.stocker.get_checksum(src_file)
         if not succeed:
-            logger.warning("    Falied to get the hash checksum.")
+            logger.warning("    Failed to get the hash checksum.")
             return failure
         already_existed = self.clark.check_existence(
             hash_value, collection_name)
         if already_existed:
-            logger.warning("    Duplicated file detected.")
+            logger.warning("    Duplicated.")
             return failure
 
         # Get the tags of the file.
@@ -283,16 +277,24 @@ class Steward:
         """This is the function that was called when a message is received."""
         # Get the full file path.
         src_file = body.decode()
-        logger.info(" *  File created: {}".format(src_file))
 
-        # Try to process the source file.
-        succeed, record_id = self.process(src_file)
+        # Only process the files when the running command fires.
+        if self.running:
+            logger.info(" *  {}".format(src_file))
+            succeed, record_id = self.process(src_file)
 
-        if succeed:
-            logger.info(" ✓  File logged with ID: {}".format(record_id))
-        else:
-            logger.warning(
-                " ✕  File not processed.")
+            if succeed:
+                logger.info(" ✓  Logged with ID: {}".format(record_id))
+            else:
+                logger.warning(
+                    " ✕  Skipped.")
+        
+        # Let the process begin only if a secret is matched.
+        if self.is_secret_mission(src_file):
+            self.stocker.destry(src_file)
+            self.stocker.check_inventory()
+            logger.info("[*] Processing...")
+            self.running = True
 
         # Tell the rabbit the result.
         ch.basic_ack(delivery_tag=method.delivery_tag)
